@@ -567,7 +567,7 @@ uint8_t* CPU::GetRegisterByteByToken(const std::string& token) {
     if (token == "L") return reinterpret_cast<uint8_t*>(&regs.HL);
     if (token == "n8") return &(currentROM[regs.PC++]);
 
-    return nullptr;  // Return nullptr if the token doesn't match any register
+    return nullptr;
 }
 
 // REMEMBER TO DO DAA
