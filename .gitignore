@@ -1,0 +1,4 @@
+Emulator
+*.o
+*.gbc
+.vscode/
