@@ -35,7 +35,8 @@ class CPU {
         CPU(uint freq);
         void LoadBootRom(const char* file);
         void LoadCart(const char* file);
-        uint8_t* GetRegisterByteByToken(const std::string& token);
+        uint16_t GetRegisterByteByToken(const std::string& token);
+        void SetRegisterByteByToken(const std::string& token, const uint16_t& value);
         void Execute();
         ~CPU();
 };

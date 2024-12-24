@@ -25,7 +25,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0x15, {"DEC", "D"}},
     {0x16, {"LD", "D", "n8"}},
     {0x17, {"RLA"}},
-    {0x18, {"JR", "e8"}},
+    {0x18, {"JR", "n8"}},
     {0x19, {"ADD", "HL", "DE"}},
     {0x1A, {"LD", "A", "DE", "ADDR"}},
     {0x1B, {"DEC", "DE"}},
@@ -33,7 +33,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0x1D, {"DEC", "E"}},
     {0x1E, {"LD", "E", "n8"}},
     {0x1F, {"RRA"}},
-    {0x20, {"JR", "NZ", "e8"}},
+    {0x20, {"JR", "NZ", "n8"}},
     {0x21, {"LD", "HL", "n16"}},
     {0x22, {"LD", "HL", "ADDR", "INCR", "A"}},
     {0x23, {"INC", "HL"}},
@@ -41,7 +41,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0x25, {"DEC", "H"}},
     {0x26, {"LD", "H", "n8"}},
     {0x27, {"DAA"}},
-    {0x28, {"JR", "Z", "e8"}},
+    {0x28, {"JR", "Z", "n8"}},
     {0x29, {"ADD", "HL", "HL"}},
     {0x2A, {"LD", "A", "HL", "ADDR", "INCR"}},
     {0x2B, {"DEC", "HL"}},
@@ -49,7 +49,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0x2D, {"DEC", "L"}},
     {0x2E, {"LD", "L", "n8"}},
     {0x2F, {"CPL"}},
-    {0x30, {"JR", "NC", "e8"}},
+    {0x30, {"JR", "NC", "n8"}},
     {0x31, {"LD", "SP", "n16"}},
     {0x32, {"LD", "HL", "ADDR", "DECR", "A"}},
     {0x33, {"INC", "SP"}},
@@ -57,7 +57,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0x35, {"DEC", "HL", "ADDR"}},
     {0x36, {"LD", "HL", "ADDR", "n8"}},
     {0x37, {"SCF"}},
-    {0x38, {"JR", "C", "e8"}},
+    {0x38, {"JR", "C", "n8"}},
     {0x39, {"ADD", "HL", "SP"}},
     {0x3A, {"LD", "A", "HL", "ADDR", "DECR"}},
     {0x3B, {"DEC", "SP"}},
@@ -233,7 +233,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0xE5, {"PUSH", "HL"}},
     {0xE6, {"AND", "A", "n8"}},
     {0xE7, {"RST", "20"}},
-    {0xE8, {"ADD", "SP", "e8"}},
+    {0xE8, {"ADD", "SP", "n8"}},
     {0xE9, {"JP", "HL"}},
     {0xEA, {"LD", "a16", "ADDR", "A"}},
     {0xEB, {"ILLEGAL_EB"}},
@@ -249,7 +249,7 @@ std::unordered_map<unsigned int, std::vector<std::string>> noPreInstructs {
     {0xF5, {"PUSH", "AF"}},
     {0xF6, {"OR", "A", "n8"}},
     {0xF7, {"RST", "30"}},
-    {0xF8, {"LD", "HL", "SP", "INCR", "e8"}},
+    {0xF8, {"LD", "HL", "SP", "INCR", "n8"}},
     {0xF9, {"LD", "SP", "HL"}},
     {0xFA, {"LD", "A", "a16", "ADDR"}},
     {0xFB, {"EI"}},
@@ -548,7 +548,7 @@ void CPU::LoadCart(const char* filename) {
     this->cart = new Cartridge(file,this->roms);
 }
 
-bool conditionCheck(const std::string& token, uint16_t flags) {
+bool conditionCheck(const std::string& token, const uint16_t& flags) {
     if (token == "Z") return (flags & 0x80) == 0x80;
     if (token == "NZ") return (flags & 0x80) == 0x0;
     if (token == "C") return (flags & 0x10) == 0x10;
@@ -556,18 +556,41 @@ bool conditionCheck(const std::string& token, uint16_t flags) {
     return false;
 }
 
-uint8_t* CPU::GetRegisterByteByToken(const std::string& token) {
-    if (token == "A") return reinterpret_cast<uint8_t*>(&regs.AF) + 1;
-    if (token == "F") return reinterpret_cast<uint8_t*>(&regs.AF);
-    if (token == "B") return reinterpret_cast<uint8_t*>(&regs.BC) + 1;
-    if (token == "C") return reinterpret_cast<uint8_t*>(&regs.BC);
-    if (token == "D") return reinterpret_cast<uint8_t*>(&regs.DE) + 1;
-    if (token == "E") return reinterpret_cast<uint8_t*>(&regs.DE);
-    if (token == "H") return reinterpret_cast<uint8_t*>(&regs.HL) + 1;
-    if (token == "L") return reinterpret_cast<uint8_t*>(&regs.HL);
-    if (token == "n8") return &(currentROM[regs.PC++]);
+uint16_t CPU::GetRegisterByteByToken(const std::string& token) {
+    if (token == "A") return ((regs.AF & 0xFF00) >> 8);
+    if (token == "F") return (regs.AF & 0xFF);
+    if (token == "B") return ((regs.BC & 0xFF00) >> 8);
+    if (token == "C") return (regs.BC & 0xFF);
+    if (token == "D") return ((regs.DE & 0xFF00) >> 8);
+    if (token == "E") return (regs.DE & 0xFF);
+    if (token == "H") return ((regs.HL & 0xFF00) >> 8);
+    if (token == "L") return (regs.HL & 0xFF);
 
-    return nullptr;
+    if (token == "AF") return regs.AF;
+    if (token == "BC") return regs.BC;
+    if (token == "DE") return regs.DE;
+    if (token == "HL") return regs.HL;
+
+    if (token == "n8") return (currentROM[regs.PC++]);
+    if (token == "n16") return ((currentROM[regs.PC++] << 8) | currentROM[regs.PC++]);
+    std::cerr << "Failed to get register byte for " << token << std::endl;
+    return 0;
+}
+
+void CPU::SetRegisterByteByToken(const std::string& token, const uint16_t& value) {
+    if (token == "A") {regs.AF = (regs.AF & 0xFF) | (value << 8)};
+    if (token == "F") {regs.AF = (regs.AF & 0xFF00) | (value & 0xFF)};
+    if (token == "B") {regs.BC = (regs.BC & 0xFF) | (value << 8)};
+    if (token == "C") {regs.BC = (regs.BC & 0xFF00) | (value & 0xFF)};
+    if (token == "D") {regs.DE = (regs.DE & 0xFF) | (value << 8)};
+    if (token == "E") {regs.DE = (regs.DE & 0xFF00) | (value & 0xFF)};
+    if (token == "H") {regs.HL = (regs.HL & 0xFF) | (value << 8)};
+    if (token == "L") {regs.HL = (regs.HL & 0xFF00) | (value & 0xFF)};
+
+    if (token == "AF") {regs.AF = value};
+    if (token == "BC") {regs.BC = value};
+    if (token == "DE") {regs.DE = value};
+    if (token == "HL") {regs.HL = value};
 }
 
 // REMEMBER TO DO DAA
@@ -696,12 +719,66 @@ void CPU::Execute() {
     }
     if ((*tokens)[0] == "ADC") {
         bool carry = ((this->regs.AF & 0x10) == 0x10);
-        uint16_t res = ((this->regs.AF & 0xFF00) >> 8) + carry;
+        uint8_t res = ((this->regs.AF & 0xFF00) >> 8) + carry;
         if ((*tokens)[2] == "HL") {
             res += this->currentROM[this->regs.HL];
         } else {
-            res += *GetRegisterByteByToken((*tokens)[2]);
+            res += GetRegisterByteByToken((*tokens)[2]);
         }
+        this->regs.AF = ((res == 0) << 7) | (((res & 0xF) < ((this->regs.AF & 0xF00) >> 8)) << 5) | (((res & 0xFF) < ((this->regs.AF & 0xFF00) >> 8)) << 4) | (res << 8);
+        if (this->interrupts.IME_scheduled) {
+            this->interrupts.IME_scheduled = false;
+            this->interrupts.IME = true;
+        }
+        return;
+    }
+    if ((*tokens)[0] == "ADD") { // MUST FIX
+        if ((*tokens)[1] == "A") {
+            uint8_t res = GetRegisterByteByToken((*tokens)[1]);
+            if ((*tokens)[2] == "HL") {
+                res += this->currentROM[this->regs.HL];
+            } else {
+                res += GetRegisterByteByToken((*tokens)[2]);
+            }
+            this->regs.AF = ((res == 0) << 7) | (((res & 0xF) < ((this->regs.AF & 0xF00) >> 8)) << 5) | (((res & 0xFF) < ((this->regs.AF & 0xFF00) >> 8)) << 4) | (res << 8);
+        } else if ((*tokens)[1] == "HL") {
+            uint16_t res = GetRegisterByteByToken((*tokens)[1]);
+            res += GetRegisterByteByToken((*tokens)[2]);
+            this->regs.AF = (this->regs.AF & 0x80) | (((res & 0xF) < ((this->regs.HL & 0xF00) >> 8)) << 5) | (((res & 0xFF) < ((this->regs.AF & 0xFF00) >> 8)) << 4) | (res << 8);  // TODO
+        } else if ((*tokens)[1] == "SP") {
+            uint16_t res = GetRegisterByteByToken((*tokens)[1]);
+            res += GetRegisterByteByToken((*tokens)[2]);
+            this->regs.AF &= 0xFF00; // TODO
+        }
+        if (this->interrupts.IME_scheduled) {
+            this->interrupts.IME_scheduled = false;
+            this->interrupts.IME = true;
+        }
+        return;
+    }
+    if ((*tokens)[0] == "SUB") {
+        uint8_t res = ((this->regs.AF & 0xFF00) >> 8);
+        if ((*tokens)[2] == "HL") {
+            res -= this->currentROM[this->regs.HL];
+        } else {
+            res -= GetRegisterByteByToken((*tokens)[2]);
+        }
+        this->regs.AF = ((res == 0) << 7) | (((res & 0xF) > ((this->regs.AF & 0xF00) >> 8)) << 5) | (((res & 0xFF) > ((this->regs.AF & 0xFF00) >> 8)) << 4) | (res << 8);
+        if (this->interrupts.IME_scheduled) {
+            this->interrupts.IME_scheduled = false;
+            this->interrupts.IME = true;
+        }
+        return;
+    }
+    if ((*tokens)[0] == "SBC") {
+        bool carry = ((this->regs.AF & 0x10) == 0x10);
+        uint8_t res = ((this->regs.AF & 0xFF00) >> 8) - carry;
+        if ((*tokens)[2] == "HL") {
+            res -= this->currentROM[this->regs.HL];
+        } else {
+            res -= GetRegisterByteByToken((*tokens)[2]);
+        }
+        this->regs.AF = ((res == 0) << 7) | (((res & 0xF) > ((this->regs.AF & 0xF00) >> 8)) << 5) | (((res & 0xFF) > ((this->regs.AF & 0xFF00) >> 8)) << 4) | (res << 8);
         if (this->interrupts.IME_scheduled) {
             this->interrupts.IME_scheduled = false;
             this->interrupts.IME = true;
